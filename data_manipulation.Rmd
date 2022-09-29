@@ -1,0 +1,137 @@
+---
+title: '20220922: data manipulation'
+author: "wyy"
+date: "2022-09-22"
+output: github_document
+---
+
+Once again we’re going to be using the tidyverse, so we’ll load that at the outset. We’re going to be looking at a lot of output, so I’ll print only three lines of each tibble by default. Lastly, we’ll focus on the data in FAS_litters.csv and FAS_pups.csv, so we’ll load those data and clean up the column names using what we learned in Data Import.
+
+```{r}
+library(tidyverse)
+
+options(tibble.print_min = 3)
+
+litters_data = read_csv("./data/FAS_litters.csv",
+  col_types = "ccddiiii")
+litters_data = janitor::clean_names(litters_data)
+
+pups_data = read_csv("./data/FAS_pups.csv",
+  col_types = "ciiiii")
+pups_data = janitor::clean_names(pups_data)
+
+```
+##    select
+You can specify the columns you want to keep by naming all of them:
+```{r}
+select(litters_data, group, litter_number, gd0_weight, pups_born_alive)
+```
+You can specify the specify a range of columns to keep:
+```{r}
+select(litters_data, group:gd_of_birth)
+```
+You can also specify columns you’d like to remove:
+```{r}
+select(litters_data, -pups_survive)
+```
+You can rename variables as part of this process:
+```{r}
+select(litters_data, GROUP = group, LiTtEr_NuMbEr = litter_number)
+```
+If all you want to do is rename something, you can use rename instead of select. This will rename the variables you care about, and keep everything else:
+```{r}
+rename(litters_data, GROUP = group, LiTtEr_NuMbEr = litter_number)
+```
+There are some handy helper functions for select; read about all of them using ?select_helpers. I use starts_with(), ends_with(), and contains() often, especially when there variables are named with suffixes or other standard patterns:
+```{r}
+select(litters_data, starts_with("gd"))
+```
+I also frequently use is everything(), which is handy for reorganizing columns without discarding anything:
+```{r}
+select(litters_data, litter_number, pups_survive, everything())
+```
+relocate does a similar thing (and is sort of like rename in that it’s handy but not critical):
+```{r}
+relocate(litters_data, litter_number, pups_survive)
+```
+Learning Assessment: In the pups data, select the columns containing litter number, sex, and PD ears.
+
+Solution
+```{r}
+select(pups_data,litter_number,sex,pd_ears)
+```
+
+##    filter
+Some data tables will include rows you don’t need for your current analysis. Although you could remove specific row numbers using base R, you shouldn’t – this might break if the raw data are updated, and the thought process isn’t transparent. Instead, you should filter rows based on logical expressions using the filter function. Like select, the first argument to filter is the dataframe you’re filtering; all subsequent arguments are logical expressions.
+
+You will often filter using comparison operators (>, >=, <, <=, ==, and !=). You may also use %in% to detect if values appear in a set, and is.na() to find missing values. The results of comparisons are logical – the statement is TRUE or FALSE depending on the values you compare – and can be combined with other comparisons using the logical operators & and |, or negated using !.
+
+```{r}
+drop_na(litters_data)
+```
+drop_na(litters_data) will remove any row with a missing value
+```{r}
+drop_na(litters_data, gd0_weight)
+```
+drop_na(litters_data, wt_increase) will remove rows for which wt_increase is missing.
+
+Learning Assessment: In the pups data:
+
+1. Filter to include only pups with sex 1
+2. Filter to include only pups with PD walk less than 11 and sex 2
+
+Solution
+1.
+```{r}
+filter(pups_data,sex==1)
+```
+2.
+```{r}
+filter(pups_data,sex==2,pd_walk<11)
+```
+##    mutate
+Sometimes you need to select columns; sometimes you need to change them or create new ones. You can do this using mutate.
+
+The example below creates a new variable measuring the difference between gd18_weight and gd0_weight and modifies the existing group variable.
+
+```{r}
+mutate(litters_data,
+  wt_gain = gd18_weight - gd0_weight,
+  group = str_to_lower(group) #改成小写
+)
+```
+Learning Assessment: In the pups data:
+
+1.Create a variable that subtracts 7 from PD pivot
+2.Create a variable that is the sum of all the PD variables
+
+Solution
+1
+```{r}
+mutate(pups_data,pd_pivot_subs_seven=pd_pivot-7)
+```
+2
+```{r}
+mutate(pups_data,pd_sum=pd_ears+pd_eyes+pd_pivot+pd_walk)
+```
+##    arrange
+In comparison to the preceding, arranging is pretty straightforward. You can arrange the rows in your data according to the values in one or more columns:
+
+```{r}
+head(arrange(litters_data, group, pups_born_alive), 10)
+```
+##    %<%
+```{r}
+litters_data = 
+  read_csv("./data/FAS_litters.csv", col_types = "ccddiiii") %>%
+  janitor::clean_names(dat = .) %>%
+  select(.data = ., -pups_survive) %>%
+  mutate(.data = .,
+    wt_gain = gd18_weight - gd0_weight,
+    group = str_to_lower(group)) %>% 
+  drop_na(data = ., wt_gain)
+
+litters_data
+```
+
+
