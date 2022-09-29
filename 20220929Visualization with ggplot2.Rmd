@@ -1,0 +1,168 @@
+---
+title: '20220929: Visualization with ggplot2'
+author: "wyy"
+date: "2022-09-29"
+output: github_document
+---
+
+We’ll be working with NOAA weather data, which is downloaded using rnoaa::meteo_pull_monitors function in the code chunk below; similar code underlies the weather dataset used elsewhere in the course. Because this process can take some time, I’ll cache the code chunk.
+
+```{r}
+library(tidyverse)
+library(ggridges)
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USC00519397", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(
+      id, 
+      USW00094728 = "CentralPark_NY", 
+      USC00519397 = "Waikiki_HA",
+      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+Let's make a scatterplot
+
+```{r}
+ggplot(weather_df,aes(x=tmin,y=tmax))+
+  geom_point()
+```
+
+Let's make the same scatterplot, but different
+
+```{r}
+weather_df%>%
+  drop_na()%>%
+  #filter(name=="(entralPark_NY")%>%
+  ggplot(aes(x=tmin,y=tmax))+
+  geom_point()
+```
+
+Let's keep making the same plot but different.
+
+```{r}
+plot_weather = 
+  weather_df %>%
+  ggplot(aes(x = tmin, y = tmax)) 
+
+plot_weather + geom_point()
+```
+##   Advanced scatterplot
+The basic scatterplot gave some useful information – the variables are related roughly as we’d expect, and there aren’t any obvious outliers to investigate before moving on. We do, however, have other variables to learn about using additional aesthetic mappings.
+
+Let’s start with name, which I can incorporate using the color aesthetic:
+
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name))
+```
+
+color on the geom_point -> one line for everything
+
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = .5) +
+  # alpha: transparent
+  geom_smooth(se = FALSE)
+```
+color on the first line -> 3 lines for all names
+
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax,color=name)) + 
+  geom_point(alpha=.3) +
+  geom_smooth(se = FALSE)
+```
+
+maybe make separate panels.
+
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  facet_grid(. ~ name)# column to be names
+```
+```{r}
+ggplot(weather_df, aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  geom_smooth(se = FALSE) + 
+  facet_grid( name~ .)# row to be names
+```
+
+'tmax' vs 'tmin' is boring, let's spice it up some.
+
+```{r}
+ggplot(weather_df, aes(x = date, y = tmax, color = name)) + 
+  geom_point(aes(size = prcp), alpha = .5) +
+  geom_smooth(se=FALSE) + 
+  facet_grid(. ~ name)+
+  theme(axis.text.x=element_text(angle=90,vjust=0.5,hjust=1))
+#theme: 横坐标label竖过来放
+```
+##    Same quick stuff
+```{r}
+weather_df%>%
+  ggplot(aes(x=tmin,y=tmax))+
+  geom_hex()
+```
+##    Univariate plots
+
+Histograms, barplots,boxplots, violins
+
+```{r}
+weather_df%>%
+  ggplot(aes(x=tmax,color=name))+
+  geom_histogram()
+```
+
+```{r}
+weather_df%>%
+  ggplot(aes(x=tmax,color=name))+
+  geom_histogram()+
+  facet_grid(.~name)
+```
+```{r}
+ggplot(weather_df, aes(x = tmax, fill = name)) + 
+  geom_histogram(position = "dodge", binwidth = 2)
+```
+```{r}
+ggplot(weather_df, aes(x = tmax, fill = name)) + 
+  geom_density(alpha = .4, adjust = .5, color = "blue")
+```
+
+#   Boxplots
+```{r}
+ggplot(weather_df, aes(x = name, y = tmax)) + geom_boxplot()
+```
+
+#   violin
+```{r}
+ggplot(weather_df, aes(x = name, y = tmax)) + 
+  geom_violin(aes(fill = name), alpha = .5) + 
+  stat_summary(fun = "median", color = "blue")
+```
+
+##    sabing an embedding plots
+
+```{r}
+weather_scatterplot=
+  weather_df%>%
+  ggplot(aes(x=date,y=tmax,color=name))+
+  geom_point(aes(size=prcp),alpha=.3)+
+  geom_smooth(se=FALSE)+
+  facet_grid(.~name)
+
+weather_scatterplot
+ggsave("results/weather_scatterplot.pdf",weather_scatterplot,width=8,height=5)
+```
+调图片宽度
+```{r,fig.width=10}
+weather_scatterplot
+```
+
+
